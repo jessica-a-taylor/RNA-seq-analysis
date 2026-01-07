@@ -4,6 +4,12 @@ library(hash)
 library(ggplot2)
 library(pheatmap)
 library(paletteer)
+library(GenomicRanges)
+library(operators)
+
+gff_genes <- rtracklayer::import("ColCEN_GENES.gff3")[,c(2,6)]
+gff_genes <- gff_genes[gff_genes$type=="gene",]
+gff_genes <- gff_genes[-c(which(is.na(gff_genes$gene_id))),]
 
 allGenotypes <- c("Col-0", "sdg2", "atx1", "jmj14")
 
@@ -67,6 +73,10 @@ DEGs_normCounts <- normDDS[which(rownames(normDDS) %in% DEGs),]
 source("Functions/Calculate_Zscores.R")
 DEGs_normCounts <- calculate_Zscore(DEGs_normCounts)
 write.csv(DEGs_normCounts, "Results/Col-0/DEGs.csv")
+
+bedFile <- gff_genes[which(gff_genes$gene_id %in% rownames(DEGs_normCounts)),]
+rtracklayer::export.bed(bedFile, "Results/Col-0/DEGs.bed")
+rm(bedFile)
 
 # Fuzzy k-means analysis.
 Zscores <- as.matrix(DEGs_normCounts[,which(str_detect(colnames(DEGs_normCounts), "Zscore")==TRUE)])
@@ -154,5 +164,9 @@ for (genotype in allGenotypes[-1]) {
   
   DEGs_vs_WT <- calculate_Zscore(DEGs_vs_WT)
   write.csv(DEGs_vs_WT, paste0("Results/", genotype,"/","DEGs_vs_WT.csv"))
+  
+  bedFile <- gff_genes[which(gff_genes$gene_id %in% rownames(DEGs_vs_WT)),]
+  rtracklayer::export.bed(bedFile, paste0("Results/", genotype,"/","DEGs_vs_WT.bed"))
+  rm(bedFile)
 }
 

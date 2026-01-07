@@ -5,3 +5,5 @@
 *.txt
 *.csv
 *.xlsx
+*.gff3
+*.bed
