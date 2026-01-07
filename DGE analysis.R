@@ -5,10 +5,15 @@ library(ggplot2)
 library(pheatmap)
 library(paletteer)
 
+allGenotypes <- c("Col-0", "sdg2", "atx1", "jmj14")
+
 # Import raw read counts.
 rawCounts <- data.frame(Gene = read.table("Counts_data/Col-0/Col_F0_1_readCounts.txt")[,1])
-for (file in list.files("Counts_data/Col-0")) {
-  rawCounts <- cbind(rawCounts, read.table(paste0("Counts_data/Col-0/",file))[,2])
+
+for (genotype in allGenotypes) {
+  for (file in list.files(paste0("Counts_data/", genotype))) {
+    rawCounts <- cbind(rawCounts, read.table(paste0("Counts_data/", genotype, "/",file))[,2])
+  }
 }
 
 # Set row names to gene IDs
@@ -16,17 +21,22 @@ rownames(rawCounts) <- rawCounts$Gene
 rawCounts <- rawCounts[,-1]
 
 # Set column names to sample IDs
-colnames(rawCounts) <- str_match(list.files("Counts_data/Col-0"), "^(.*)_readCounts.txt")[,2]
+colnames(rawCounts) <- c(str_match(list.files("Counts_data/Col-0"), "^(.*)_readCounts.txt")[,2],
+                         str_match(list.files("Counts_data/sdg2"), "^(.*)_readCounts.txt")[,2],
+                         str_match(list.files("Counts_data/atx1"), "^(.*)_readCounts.txt")[,2],
+                         str_match(list.files("Counts_data/jmj14"), "^(.*)_readCounts.txt")[,2])
 
 # Create metadata file.
-colData <- data.frame(Sample = as.factor(colnames(rawCounts)),
-                      Time = as.factor(str_match(colnames(rawCounts),"^Col_(F[0-9]+)_[0-9]+$")[,2]))
+colData <- data.frame(Sample = factor(colnames(rawCounts)),
+                      Genotype = factor(str_match(colnames(rawCounts),"^([A-Za-z0-9]+)_F[0-9]+_[0-9]+$")[,2],
+                                        levels = c("Col", "sdg2", "atx1", "jmj14")),
+                      Time = factor(str_match(colnames(rawCounts),"^[A-Za-z0-9]+_(F[0-9]+)_[0-9]+$")[,2],
+                                    levels = c("F0", "F30", "F90", "F180")))
 
 rownames(colData) <- colnames(rawCounts)
 
 # Construct DESeq dataset.
-dds <- DESeqDataSetFromMatrix(countData=rawCounts, colData=colData, design=~Time)
-dds$Time <- relevel(dds$Time, ref = "F0")
+dds <- DESeqDataSetFromMatrix(countData = rawCounts, colData = colData, design = ~ Genotype+Time+Genotype:Time)
 
 # Remove genes with < 10 reads.
 dds <- dds[rowSums(counts(dds)) >= 10,]
@@ -34,13 +44,13 @@ dds <- dds[rowSums(counts(dds)) >= 10,]
 # Run the DESeq.
 DDS <- DESeq(dds)
 normDDS <- counts(DDS, normalized = TRUE) # normalization with respect to the sequencing depth
-write.csv(normDDS, "Results/Col-0/Normalised_counts.csv")
+write.csv(normDDS, "Results/Normalised_counts.csv")
 
-# Save the results.
+# Identify DEGs in Col-0.
 DEGs <- c()
 
 for (time in c("F30", "F90", "F180")) {
-  res <- results(DDS, contrast = c("Time", time, "F0"), independentFiltering = FALSE)
+  res <- results(DDS, name = paste0("Time_",time,"_vs_F0"), independentFiltering = FALSE)
   res <- res[,c(2,6)]
   colnames(res) <- c(paste0(time, "_FC"), paste0(time, "_padj"))
   
@@ -56,6 +66,7 @@ DEGs_normCounts <- normDDS[which(rownames(normDDS) %in% DEGs),]
 # Calculate Z-scores
 source("Functions/Calculate_Zscores.R")
 DEGs_normCounts <- calculate_Zscore(DEGs_normCounts)
+write.csv(DEGs_normCounts, "Results/Col-0/DEGs.csv")
 
 # Fuzzy k-means analysis.
 Zscores <- as.matrix(DEGs_normCounts[,which(str_detect(colnames(DEGs_normCounts), "Zscore")==TRUE)])
@@ -123,3 +134,25 @@ pheatmap(fuzzyClusteringData[order(fuzzyClusteringData$cluster),c(1:4)],
          annotation_names_row = FALSE,
          annotation_legend = FALSE,
          scale = "row", fontsize = 16)
+
+# Identify genes with whose temporal response differs in the mutants
+for (genotype in allGenotypes[-1]) {
+  DEGs <- c()
+  
+  for (time in c("F30", "F90", "F180")) {
+    res <- results(DDS, name = paste0("Genotype",genotype,".Time",time), independentFiltering = FALSE)
+    res <- res[,c(2,6)]
+    colnames(res) <- c(paste0(time, "_FC"), paste0(time, "_padj"))
+    
+    write.csv(res, paste0("Results/", genotype, "/", time, "_vs_WT.csv"))
+    
+    # Get list of DEGs with logFC < -1 or > 1 and padj <= .05
+    DEGs <- append(DEGs, rownames(res[which(res[,1]>=1 | res[,1]<=-1 & res[,2]<=.01),]))
+  }
+  DEGs <- unique(DEGs)
+  DEGs_vs_WT <- normDDS[which(rownames(normDDS) %in% DEGs),]
+  
+  DEGs_vs_WT <- calculate_Zscore(DEGs_vs_WT)
+  write.csv(DEGs_vs_WT, paste0("Results/", genotype,"/","DEGs_vs_WT.csv"))
+}
+
