@@ -49,8 +49,34 @@ dds <- dds[rowSums(counts(dds)) >= 10,]
 
 # Run the DESeq.
 DDS <- DESeq(dds)
-normDDS <- counts(DDS, normalized = TRUE) # normalization with respect to the sequencing depth
+normDDS <- counts(DDS, normalized = TRUE) # normalisation with respect to the sequencing depth
 write.csv(normDDS, "Results/Normalised_counts.csv")
+
+# PCA
+vsd <- vst(dds, blind=TRUE) # transformation of counts data
+pcaData <- plotPCA(vsd, intgroup = c("Genotype", "Time"), returnData = TRUE)
+percentVar <- round(100 * attr(pcaData, "percentVar"))
+
+ggplot(pcaData, aes(PC1, PC2,
+                    color = Genotype,
+                    shape = Time)) +
+  geom_point(size = 3) +
+  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  theme_bw()
+
+ggplot(pcaData, aes(PC1, PC2,
+                    color = Genotype)) +
+  geom_point(size = 3) +
+  facet_wrap(~ Time) +
+  xlab(paste0("PC1: ", percentVar[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar[2], "% variance")) +
+  theme_bw()
+
+# Hieracrchical clustering
+vsd_mat <- assay(vsd)
+vsd_cor <- cor(vsd_mat) 
+pheatmap(vsd_cor)
 
 # Identify DEGs in Col-0.
 DEGs <- c()
