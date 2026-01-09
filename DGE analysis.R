@@ -7,6 +7,7 @@ library(paletteer)
 library(GenomicRanges)
 library(operators)
 library(dplyr)
+library(readxl)
 
 gff_genes <- rtracklayer::import("ColCEN_GENES.gff3")[,c(2,6)]
 gff_genes <- gff_genes[gff_genes$type=="gene",]
@@ -58,26 +59,36 @@ vsd <- vst(dds, blind=TRUE) # transformation of counts data
 pcaData <- plotPCA(vsd, intgroup = c("Genotype", "Time"), returnData = TRUE)
 percentVar <- round(100 * attr(pcaData, "percentVar"))
 
-ggplot(pcaData, aes(PC1, PC2,
-                    color = Genotype,
-                    shape = Time)) +
+plot <- ggplot(pcaData, aes(PC1, PC2, color = Genotype, shape = Time)) +
   geom_point(size = 3) +
   xlab(paste0("PC1: ", percentVar[1], "% variance")) +
   ylab(paste0("PC2: ", percentVar[2], "% variance")) +
   theme_bw()
 
-ggplot(pcaData, aes(PC1, PC2,
-                    color = Genotype)) +
+plot <- ggplot(pcaData, aes(PC1, PC2, color = Genotype)) +
   geom_point(size = 3) +
   facet_wrap(~ Time) +
   xlab(paste0("PC1: ", percentVar[1], "% variance")) +
   ylab(paste0("PC2: ", percentVar[2], "% variance")) +
-  theme_bw()
+  theme_bw() +
+  theme(axis.text = element_text(size = 14, colour = "black"),
+        axis.title = element_text(size = 16, colour = "black"),
+        legend.text = element_text(size = 14, colour = "black"),
+        legend.title = element_text(size = 16, colour = "black"),
+        strip.text = element_text(size = 16, colour = "black"))
+
+png("Figures/QC/PCA plot.png", width = 750, height = 700)
+print(plot)
+dev.off()
 
 # Hierarchical clustering
 vsd_mat <- assay(vsd)
 vsd_cor <- cor(vsd_mat) 
-pheatmap(vsd_cor)
+plot <- pheatmap(vsd_cor, fontsize = 14)
+
+png("Figures/QC/Hierarchical clustering heatmap.png", width = 1000, height = 1000)
+print(plot)
+dev.off()
 
 # Identify DEGs in Col-0.
 DEGs <- c()
