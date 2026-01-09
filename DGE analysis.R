@@ -6,6 +6,7 @@ library(pheatmap)
 library(paletteer)
 library(GenomicRanges)
 library(operators)
+library(dplyr)
 
 gff_genes <- rtracklayer::import("ColCEN_GENES.gff3")[,c(2,6)]
 gff_genes <- gff_genes[gff_genes$type=="gene",]
@@ -73,7 +74,7 @@ ggplot(pcaData, aes(PC1, PC2,
   ylab(paste0("PC2: ", percentVar[2], "% variance")) +
   theme_bw()
 
-# Hieracrchical clustering
+# Hierarchical clustering
 vsd_mat <- assay(vsd)
 vsd_cor <- cor(vsd_mat) 
 pheatmap(vsd_cor)
@@ -89,7 +90,7 @@ for (time in c("F30", "F90", "F180")) {
   write.csv(res, paste0("Results/Col-0/", time, "_vs_F0.csv"))
   
   # Get list of DEGs with logFC < -1 or > 1 and padj <= .01
-  DEGs <- append(DEGs, rownames(res[which(res[,1]>=1 | res[,1]<=-1 & res[,2]<=.01),]))
+  DEGs <- append(DEGs, rownames(res[which(res[,1]>=1 & res[,2]<=.01 | res[,1]<=-1 & res[,2]<=.01),]))
 }
 
 DEGs <- unique(DEGs)
@@ -100,7 +101,13 @@ source("Functions/Calculate_Zscores.R")
 DEGs_normCounts <- calculate_Zscore(DEGs_normCounts)
 write.csv(DEGs_normCounts, "Results/Col-0/DEGs.csv")
 
-bedFile <- gff_genes[which(gff_genes$gene_id %in% rownames(DEGs_normCounts)),]
+bedFile <- as.data.frame(gff_genes[which(gff_genes$gene_id %in% rownames(DEGs_normCounts)),]) %>%
+  distinct(gene_id, .keep_all = TRUE)
+
+bedFile <- GRanges(seqnames = bedFile$seqnames,
+                   IRanges(start = bedFile$start, end = bedFile$end, width = bedFile$width),
+                   strand = bedFile$strand)
+
 rtracklayer::export.bed(bedFile, "Results/Col-0/DEGs.bed")
 rm(bedFile)
 
@@ -183,7 +190,7 @@ for (genotype in allGenotypes[-1]) {
     write.csv(res, paste0("Results/", genotype, "/", time, "_vs_WT.csv"))
     
     # Get list of DEGs with logFC < -1 or > 1 and padj <= .05
-    DEGs <- append(DEGs, rownames(res[which(res[,1]>=1 | res[,1]<=-1 & res[,2]<=.01),]))
+    DEGs <- append(DEGs, rownames(res[which(res[,1]>=1 & res[,2]<=.05 | res[,1]<=-1 & res[,2]<=.05),]))
   }
   DEGs <- unique(DEGs)
   DEGs_vs_WT <- normDDS[which(rownames(normDDS) %in% DEGs),]
@@ -191,7 +198,13 @@ for (genotype in allGenotypes[-1]) {
   DEGs_vs_WT <- calculate_Zscore(DEGs_vs_WT)
   write.csv(DEGs_vs_WT, paste0("Results/", genotype,"/","DEGs_vs_WT.csv"))
   
-  bedFile <- gff_genes[which(gff_genes$gene_id %in% rownames(DEGs_vs_WT)),]
+  bedFile <- as.data.frame(gff_genes[which(gff_genes$gene_id %in% rownames(DEGs_vs_WT)),]) %>%
+    distinct(gene_id, .keep_all = TRUE)
+  
+  bedFile <- GRanges(seqnames = bedFile$seqnames,
+                     IRanges(start = bedFile$start, end = bedFile$end, width = bedFile$width),
+                     strand = bedFile$strand)
+  
   rtracklayer::export.bed(bedFile, paste0("Results/", genotype,"/","DEGs_vs_WT.bed"))
   rm(bedFile)
 }
