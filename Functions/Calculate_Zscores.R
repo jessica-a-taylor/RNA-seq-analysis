@@ -2,7 +2,7 @@ calculate_Zscore <- function(normCounts) {
   
   # Calculate the average counts per time point.
   avgColNames <- c()
-  for (time in c("F0","F30","F90","F180")) {
+  for (time in c("0","30","90","180")) {
     normCounts <- cbind(normCounts, rowMeans(as.matrix(normCounts[,which(str_detect(colnames(normCounts), time)==TRUE)])))
   
     avgColNames <- append(avgColNames, paste0(time, "_avg"))
@@ -17,7 +17,7 @@ calculate_Zscore <- function(normCounts) {
   
   # Calculate Z-scores.
   ZcolNames <- c()
-  for (col in which(str_detect(colnames(normCounts), "[A-Za-z]+[0-9]+_avg") == TRUE)) {
+  for (col in which(str_detect(colnames(normCounts), ".*[0-9]+_avg") == TRUE)) {
     normCounts <- cbind(normCounts, (normCounts[,col]-normCounts[,"pop_avg"])/normCounts[,"pop_sd"])
     
     ZcolNames <- append(ZcolNames, paste0(str_match(colnames(normCounts)[col], "^(.*)avg")[,2],"Zscore"))

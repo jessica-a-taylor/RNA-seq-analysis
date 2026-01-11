@@ -1,3 +1,6 @@
+source("Functions/loadLibraries.R")
+loadLibraries()
+
 DEGs <- read.csv("Results/Col-0/DEGs.csv")[,1] # 9084 DEGs
 BjornsonData <- as.data.frame(read.csv("Bjornson et al. data analysis/High_conf_DEGs.csv")) # 6140 high-confidence DEGs
 
