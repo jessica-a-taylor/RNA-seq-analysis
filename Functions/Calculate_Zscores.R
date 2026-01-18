@@ -1,11 +1,12 @@
-calculate_Zscore <- function(normCounts) {
+calculate_Zscore <- function(normCounts, genotype) {
   
   # Calculate the average counts per time point.
   avgColNames <- c()
   for (time in c("0","30","90","180")) {
-    normCounts <- cbind(normCounts, rowMeans(as.matrix(normCounts[,which(str_detect(colnames(normCounts), time)==TRUE)])))
+    normCounts <- cbind(normCounts, rowMeans(as.matrix(normCounts[,which(str_detect(colnames(normCounts), time)==TRUE &
+                                                                           str_detect(colnames(normCounts), genotype) == TRUE)])))
   
-    avgColNames <- append(avgColNames, paste0(time, "_avg"))
+    avgColNames <- append(avgColNames, paste0(genotype, "_", time, "_avg"))
   }
   colnames(normCounts) <- c(colnames(normCounts)[1:(ncol(normCounts)-length(avgColNames))], avgColNames)
  
@@ -13,12 +14,15 @@ calculate_Zscore <- function(normCounts) {
   normCounts <- cbind(normCounts, rowMeans(as.matrix(normCounts[,avgColNames])))
   normCounts <- cbind(normCounts, rowSds(as.matrix(normCounts[,avgColNames])))
   
-  colnames(normCounts) <- c(colnames(normCounts)[1:(ncol(normCounts)-2)], "pop_avg", "pop_sd")
+  colnames(normCounts) <- c(colnames(normCounts)[1:(ncol(normCounts)-2)], 
+                            paste0(genotype,"_pop_avg"), 
+                            paste0(genotype,"_pop_sd"))
   
   # Calculate Z-scores.
   ZcolNames <- c()
-  for (col in which(str_detect(colnames(normCounts), ".*[0-9]+_avg") == TRUE)) {
-    normCounts <- cbind(normCounts, (normCounts[,col]-normCounts[,"pop_avg"])/normCounts[,"pop_sd"])
+  for (col in which(str_detect(colnames(normCounts), ".*[0-9]+_avg") == TRUE &
+                    str_detect(colnames(normCounts), genotype) == TRUE)) {
+    normCounts <- cbind(normCounts, (normCounts[,col]-normCounts[,paste0(genotype,"_pop_avg")])/normCounts[,paste0(genotype,"_pop_sd")])
     
     ZcolNames <- append(ZcolNames, paste0(str_match(colnames(normCounts)[col], "^(.*)avg")[,2],"Zscore"))
   }

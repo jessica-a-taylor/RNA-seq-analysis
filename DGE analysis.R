@@ -1,14 +1,5 @@
-library(stringr)
-library(DESeq2)
-library(hash)
-library(ggplot2)
-library(pheatmap)
-library(paletteer)
-library(GenomicRanges)
-library(operators)
-library(dplyr)
-library(readxl)
-library(Mfuzz)
+source("Functions/loadLibraries.R")
+loadLibraries()
 
 gff_genes <- rtracklayer::import("ColCEN_GENES.gff3")[,c(2,6)]
 gff_genes <- gff_genes[gff_genes$type=="gene",]
@@ -110,7 +101,7 @@ DEGs_normCounts <- normDDS[which(rownames(normDDS) %in% DEGs),]
 
 # Calculate Z-scores
 source("Functions/Calculate_Zscores.R")
-DEGs_normCounts <- calculate_Zscore(DEGs_normCounts)
+DEGs_normCounts <- calculate_Zscore(DEGs_normCounts, "Col")
 write.csv(DEGs_normCounts, "Results/Col-0/DEGs.csv")
 
 bedFile <- as.data.frame(gff_genes[which(gff_genes$gene_id %in% rownames(DEGs_normCounts)),]) %>%
@@ -140,7 +131,7 @@ for (genotype in allGenotypes[-1]) {
   DEGs <- unique(DEGs)
   DEGs_vs_WT <- normDDS[which(rownames(normDDS) %in% DEGs),]
   
-  DEGs_vs_WT <- calculate_Zscore(DEGs_vs_WT)
+  DEGs_vs_WT <- calculate_Zscore(DEGs_vs_WT, genotype)
   write.csv(DEGs_vs_WT, paste0("Results/", genotype,"/","DEGs_vs_WT.csv"))
   
   bedFile <- as.data.frame(gff_genes[which(gff_genes$gene_id %in% rownames(DEGs_vs_WT)),]) %>%
