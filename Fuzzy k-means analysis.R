@@ -1,3 +1,6 @@
+source("Functions/loadLibraries.R")
+loadLibraries()
+
 DEGs_normCounts <- as.data.frame(read.csv("Results/Col-0/DEGs.csv"))
 colnames(DEGs_normCounts)[1] <- "gene_id"
 

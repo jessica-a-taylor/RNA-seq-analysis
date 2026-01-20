@@ -1,14 +1,5 @@
-library(stringr)
-library(DESeq2)
-library(hash)
-library(ggplot2)
-library(pheatmap)
-library(paletteer)
-library(GenomicRanges)
-library(operators)
-library(dplyr)
-library(readxl)
-library(Mfuzz)
+source("Functions/loadLibraries.R")
+loadLibraries()
 
 gff_genes <- rtracklayer::import("ColCEN_GENES.gff3")[,c(2,6)]
 gff_genes <- gff_genes[gff_genes$type=="gene",]
@@ -104,8 +95,18 @@ DEGs_vs_mock <- as.data.frame(read.csv("Bjornson et al. data analysis/DEGs_vs_mo
 DEGs_vs_F0 <- as.data.frame(read.csv("Bjornson et al. data analysis/DEGs_vs_F0.csv")) # 7941 genes
 
 # 6140 DEGs in common (high-confidence DEGs)
-write.csv(DEGs_vs_F0[which(DEGs_vs_F0$X %in% DEGs_vs_mock$X),],
-          "Bjornson et al. data analysis/High_conf_DEGs.csv")
+HC_DEGs <- DEGs_vs_F0[which(DEGs_vs_F0$X %in% DEGs_vs_mock$X),]
+write.csv(HC_DEGs, "Bjornson et al. data analysis/High_conf_DEGs.csv")
+
+bedFile <- as.data.frame(gff_genes[which(gff_genes$gene_id %in% HC_DEGs$X),]) %>%
+  distinct(gene_id, .keep_all = TRUE)
+
+bedFile <- GRanges(seqnames = bedFile$seqnames,
+                   IRanges(start = bedFile$start, end = bedFile$end, width = bedFile$width),
+                   strand = bedFile$strand)
+
+rtracklayer::export.bed(bedFile, "Bjornson et al. data analysis/High_conf_DEGs.bed")
+rm(bedFile)
 
 ################################################
 # Calculate Z-scores on high-confidence DEGs
