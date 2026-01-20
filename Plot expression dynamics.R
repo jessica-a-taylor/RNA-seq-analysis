@@ -47,7 +47,7 @@ for (genotype in allGenotypes) {
                                            logFC = df[,2]))
   }
 }
-for (gene in plotData$Gene) {
+for (gene in unique(plotData$Gene)) {
   plot <- ggplot(plotData[which(plotData$Gene==gene),],
                  aes(x = Time, y = logFC,
                      colour = factor(Genotype, levels = c("Col", "sdg2", "atx1", "jmj14")))) +
