@@ -28,7 +28,17 @@ plot <- ggplot(plotData, aes(x = Time, y = logFC,
   facet_wrap(~Gene) +
   theme_bw() +
   xlab("Time (min)") +
-  labs(colour = "Genotype")
+  labs(colour = "Genotype") +
+  theme(axis.title = element_text(size = 14, colour = "black"),
+        axis.text = element_text(size = 12, colour = "black"),
+        title = element_text(size = 14, colour = "black"),
+        legend.text = element_text(size = 12, colour = "black"),
+        legend.title = element_text(size = 14, colour = "black"),
+        strip.text = element_text(size = 12, colour = "black"))
+
+png("Figures/qPCR_Genes_logFC.png", width = 1000, height = 1000)
+print(plot)
+dev.off()
 
 # Plot expression dynamics for memory genes
 allGenotypes <- c("Col", "sdg2", "atx1", "jmj14")
