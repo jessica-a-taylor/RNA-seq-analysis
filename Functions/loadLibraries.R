@@ -6,6 +6,7 @@ loadLibraries <- function() {
   library(pheatmap)
   library(paletteer)
   library(GenomicRanges)
+  library(rtracklayer)
   library(operators)
   library(dplyr)
   library(readxl)

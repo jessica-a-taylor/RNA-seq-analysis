@@ -1,6 +1,10 @@
 source("Functions/loadLibraries.R")
 loadLibraries()
 
+gff_genes <- rtracklayer::import("ColCEN_GENES.gff3")[,c(2,6)]
+gff_genes <- gff_genes[gff_genes$type=="gene",]
+gff_genes <- gff_genes[-c(which(is.na(gff_genes$gene_id))),]
+
 # Fuzzy k-means analysis on all upregulated DEGs.
 normCounts <- as.data.frame(read.csv("Results/Col/DEGs.csv"))[,1:13]
 colnames(normCounts)[1] <- "gene_id"
@@ -55,6 +59,13 @@ fuzzyClusteringData <- fuzzyClusteringData[which(rownames(fuzzyClusteringData) %
 fuzzyClusteringData$cluster <- fuzzClust$Cluster
 
 write.csv(fuzzyClusteringData, "Results/Col/Clustering_results_filtered.csv")
+
+# Save gene lists for each cluster.
+for (cluster in unique(fuzzyClusteringData$cluster)) {
+  export.bed(gff_genes[which(gff_genes$gene_id %in% 
+                               fuzzyClusteringData[fuzzyClusteringData$cluster==cluster, "X"]),],
+             paste0("Results/Col/Cluster_", cluster, ".bed"))
+}
 
 # Plot a boxplot of Z-scores at each time point in each cluster.
 fuzzyClusteringData <- read.csv("Results/Col/Clustering_results_filtered.csv")[,-1]
